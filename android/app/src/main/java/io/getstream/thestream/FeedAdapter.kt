@@ -9,10 +9,15 @@ import android.widget.TextView
 import io.getstream.core.models.Activity
 import io.getstream.thestream.services.VirgilService
 import kotlinx.android.synthetic.main.feed_item.view.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 
 class FeedAdapter(context: Context, objects: MutableList<Activity>) :
-    ArrayAdapter<Activity>(context, android.R.layout.simple_list_item_1, objects) {
+    ArrayAdapter<Activity>(context, android.R.layout.simple_list_item_1, objects),
+    CoroutineScope by MainScope() {
 
     private data class ViewHolder(
         val author: TextView,
@@ -37,9 +42,15 @@ class FeedAdapter(context: Context, objects: MutableList<Activity>) :
 
         val actor = streamActivity.actor.replace("SU:", "")
         viewHolder.author.text = actor
-        val message = streamActivity.extra["message"] as String
-        val decryptedMessage = VirgilService.decrypt(message, actor)
-        viewHolder.message.text = decryptedMessage
+        viewHolder.message.text = "Loading..."
+
+        launch(Dispatchers.IO) {
+            val message = streamActivity.extra["message"] as String
+            val decryptedMessage = VirgilService.decrypt(message, actor)
+            launch(Dispatchers.Main) {
+                viewHolder.message.text = decryptedMessage
+            }
+        }
 
         newView!!.tag = viewHolder
 
